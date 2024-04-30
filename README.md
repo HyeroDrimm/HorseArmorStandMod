@@ -14,3 +14,6 @@ Then you can use it just as a classic armor stand.
 ## Requirements
 - Geckolib, version > 4.0
 - FabricAPI
+
+## Links
+- [Mod page](https://modrinth.com/mod/horse-armor-stand)
