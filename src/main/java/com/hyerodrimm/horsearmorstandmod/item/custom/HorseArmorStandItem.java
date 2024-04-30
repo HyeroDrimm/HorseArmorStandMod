@@ -20,7 +20,7 @@ import net.minecraft.world.event.GameEvent;
 import java.util.function.Consumer;
 
 public class HorseArmorStandItem extends Item {
-    public HorseArmorStandItem(Settings settings) {
+    public HorseArmorStandItem(net.minecraft.item.Item.Settings settings) {
         super(settings);
     }
 
