@@ -7,11 +7,14 @@
     },
     "_": {
       "item": "minecraft:smooth_stone_slab"
+    },
+    "#": {
+      "tag": "minecraft:planks"
     }
   },
   "pattern": [
     "/  ",
-    "///",
+    "###",
     "/_/"
   ],
   "result": {
