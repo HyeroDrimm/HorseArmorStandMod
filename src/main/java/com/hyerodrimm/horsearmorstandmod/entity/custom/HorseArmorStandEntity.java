@@ -7,7 +7,10 @@ import com.hyerodrimm.horsearmorstandmod.item.ModItems;
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.piston.PistonBehavior;
+import net.minecraft.component.DataComponentTypes;
 import net.minecraft.entity.*;
+import net.minecraft.entity.attribute.DefaultAttributeContainer;
+import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
@@ -16,8 +19,8 @@ import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.PersistentProjectileEntity;
 import net.minecraft.entity.vehicle.AbstractMinecartEntity;
+import net.minecraft.item.AnimalArmorItem;
 import net.minecraft.item.ArmorStandItem;
-import net.minecraft.item.HorseArmorItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
@@ -39,15 +42,14 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.LightType;
 import net.minecraft.world.World;
 import net.minecraft.world.event.GameEvent;
+import net.minecraft.world.explosion.Explosion;
 import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.animatable.GeoEntity;
-import software.bernie.geckolib.core.animatable.GeoAnimatable;
-import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
-import software.bernie.geckolib.core.animatable.instance.SingletonAnimatableInstanceCache;
-import software.bernie.geckolib.core.animation.*;
-import software.bernie.geckolib.core.animation.AnimationState;
-import software.bernie.geckolib.core.object.PlayState;
-
+import software.bernie.geckolib.animatable.GeoAnimatable;
+import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
+import software.bernie.geckolib.animatable.instance.SingletonAnimatableInstanceCache;
+import software.bernie.geckolib.animation.*;
+import software.bernie.geckolib.animation.AnimationState;
 import java.util.List;
 import java.util.function.Predicate;
 
@@ -64,7 +66,7 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
     private static final EulerAngle DEFAULT_RIGHT_ARM_ROTATION = new EulerAngle(-15.0f, 0.0f, 10.0f);
     private static final EulerAngle DEFAULT_LEFT_LEG_ROTATION = new EulerAngle(-1.0f, 0.0f, -1.0f);
     private static final EulerAngle DEFAULT_RIGHT_LEG_ROTATION = new EulerAngle(1.0f, 0.0f, 1.0f);*/
-    private static final EntityDimensions MARKER_DIMENSIONS = new EntityDimensions(0.0f, 0.0f, true);
+    private static final EntityDimensions MARKER_DIMENSIONS = EntityDimensions.fixed(0.0F, 0.0F);
     private static final EntityDimensions SMALL_DIMENSIONS = ModEntities.HORSE_ARMOR_STAND.getDimensions().scaled(0.5f);
     public static final int SMALL_FLAG = 1;
     public static final int HIDE_BASE_PLATE_FLAG = 8;
@@ -92,7 +94,10 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
 
     public HorseArmorStandEntity(EntityType<? extends HorseArmorStandEntity> entityType, World world) {
         super((EntityType<? extends LivingEntity>) entityType, world);
-        this.setStepHeight(0.0f);
+    }
+
+    public static DefaultAttributeContainer.Builder createArmorStandAttributes() {
+        return createLivingAttributes().add(EntityAttributes.GENERIC_STEP_HEIGHT, 0.0);
     }
 
 /*    public HorseArmorStandEntity(World world, double x, double y, double z) {
@@ -118,10 +123,9 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
         return super.canMoveVoluntarily() && this.canClip();
     }
 
-    @Override
-    protected void initDataTracker() {
-        super.initDataTracker();
-        this.dataTracker.startTracking(HORSE_ARMOR_STAND_FLAGS, (byte) 0);
+    protected void initDataTracker(DataTracker.Builder builder) {
+        super.initDataTracker(builder);
+        builder.add(HORSE_ARMOR_STAND_FLAGS, (byte)0);
         // POSES
 /*        this.dataTracker.startTracking(TRACKER_HEAD_ROTATION, DEFAULT_HEAD_ROTATION);
         this.dataTracker.startTracking(TRACKER_BODY_ROTATION, DEFAULT_BODY_ROTATION);
@@ -162,7 +166,7 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
 
     @Override
     public boolean canEquip(ItemStack stack) {
-        return !stack.isEmpty() && stack.getItem() instanceof HorseArmorItem && this.getArmorType().isEmpty() && !this.isSlotDisabled(EquipmentSlot.CHEST);
+        return !stack.isEmpty() && stack.getItem() instanceof AnimalArmorItem && this.getArmorType().isEmpty() && !this.isSlotDisabled(EquipmentSlot.CHEST);
     }
 
     @Override
@@ -170,11 +174,7 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
         super.writeCustomDataToNbt(nbt);
         NbtList nbtList = new NbtList();
         for (ItemStack itemStack : this.armorItems) {
-            NbtCompound nbtCompound = new NbtCompound();
-            if (!itemStack.isEmpty()) {
-                itemStack.writeNbt(nbtCompound);
-            }
-            nbtList.add(nbtCompound);
+            nbtList.add(itemStack.encodeAllowEmpty(this.getRegistryManager()));
         }
         nbt.put("ArmorItems", nbtList);
         nbt.putBoolean("Invisible", this.isInvisible());
@@ -195,8 +195,10 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
         super.readCustomDataFromNbt(nbt);
         if (nbt.contains("ArmorItems", NbtElement.LIST_TYPE)) {
             nbtList = nbt.getList("ArmorItems", NbtElement.COMPOUND_TYPE);
-            for (i = 0; i < this.armorItems.size(); ++i) {
-                this.armorItems.set(i, ItemStack.fromNbt(nbtList.getCompound(i)));
+
+            for(i = 0; i < this.armorItems.size(); ++i) {
+                NbtCompound nbtCompound = nbtList.getCompound(i);
+                this.armorItems.set(i, ItemStack.fromNbtOrEmpty(this.getRegistryManager(), nbtCompound));
             }
         }
         this.setInvisible(nbt.getBoolean("Invisible"));
@@ -286,7 +288,7 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
             if (this.hasStackEquipped(EquipmentSlot.CHEST) && this.equip(player, EquipmentSlot.CHEST, itemStack, hand)) {
                 return ActionResult.SUCCESS;
             }
-        } else if (itemStack.getItem() instanceof HorseArmorItem && !this.isSlotDisabled(EquipmentSlot.CHEST)) {
+        } else if (itemStack.getItem() instanceof AnimalArmorItem && !this.isSlotDisabled(EquipmentSlot.CHEST)) {
             if (this.isSlotDisabled(EquipmentSlot.CHEST)) {
                 return ActionResult.FAIL;
             }
@@ -427,9 +429,7 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
 
     private void breakAndDropItem(DamageSource damageSource) {
         ItemStack itemStack = new ItemStack(ModItems.HORSE_ARMOR_STAND_ITEM);
-        if (this.hasCustomName()) {
-            itemStack.setCustomName(this.getCustomName());
-        }
+        itemStack.set(DataComponentTypes.CUSTOM_NAME, this.getCustomName());
         Block.dropStack(this.getWorld(), this.getBlockPos(), itemStack);
         this.onBreak(damageSource);
     }
@@ -458,7 +458,7 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
         return 0.0f;
     }
 
-    @Override
+/*    @Override
     protected float getActiveEyeHeight(EntityPose pose, EntityDimensions dimensions) {
         return dimensions.height * (this.isBaby() ? 0.5f : 0.9f);
     }
@@ -466,7 +466,7 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
     @Override
     public double getHeightOffset() {
         return this.isMarker() ? 0.0 : (double) 0.1f;
-    }
+    }*/
 
     @Override
     public void travel(Vec3d movementInput) {
@@ -542,9 +542,10 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
     }
 
     @Override
-    public boolean isImmuneToExplosion() {
+    public boolean isImmuneToExplosion(Explosion explosion) {
         return this.isInvisible();
     }
+
 
     @Override
     public PistonBehavior getPistonBehavior() {
@@ -699,7 +700,7 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
     }
 
     @Override
-    public EntityDimensions getDimensions(EntityPose pose) {
+    public EntityDimensions getBaseDimensions(EntityPose pose) {
         return this.getDimensions(this.isMarker());
     }
 
