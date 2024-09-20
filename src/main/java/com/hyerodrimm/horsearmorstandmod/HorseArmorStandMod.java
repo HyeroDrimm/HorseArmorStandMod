@@ -13,7 +13,7 @@ public class HorseArmorStandMod implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
-		LOGGER.info("Initialize" + MOD_ID);
+		LOGGER.info("Initialize " + MOD_ID);
 		ModItems.registerModItems();
 		ModEntities.registerModEntities();
 	}

@@ -21,7 +21,7 @@ public class ModItems {
         return Registry.register(Registries.ITEM, new Identifier(HorseArmorStandMod.MOD_ID, name), item);
     }
     public static void registerModItems(){
-        HorseArmorStandMod.LOGGER.info("Registering Mod Items for" + HorseArmorStandMod.MOD_ID);
+        HorseArmorStandMod.LOGGER.info("Registering Mod Items for " + HorseArmorStandMod.MOD_ID);
 
         ItemGroupEvents.modifyEntriesEvent(ItemGroups.FUNCTIONAL).register(ModItems::addItemsToFunctionalTabItemGroup);
     }
