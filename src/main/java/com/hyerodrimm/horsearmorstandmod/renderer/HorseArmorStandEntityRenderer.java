@@ -31,7 +31,7 @@ public class HorseArmorStandEntityRenderer extends GeoEntityRenderer<HorseArmorS
         }
         super.render(entity, entityYaw, partialTick, poseStack, bufferSource, packedLight);
     }
-    
+
     @Override
     public boolean hasLabel(HorseArmorStandEntity animatable) {
         return !(!animatable.shouldRenderName() && (!animatable.hasCustomName() || animatable != this.dispatcher.targetedEntity));
