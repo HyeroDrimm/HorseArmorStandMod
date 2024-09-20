@@ -4,7 +4,6 @@ import com.hyerodrimm.horsearmorstandmod.entity.ModEntities;
 import com.hyerodrimm.horsearmorstandmod.entity.custom.HorseArmorStandEntity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.decoration.ArmorStandEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
