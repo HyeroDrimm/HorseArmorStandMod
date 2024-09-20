@@ -14,8 +14,8 @@ import net.minecraft.util.Identifier;
 public class ModEntities {
     public static final EntityType<HorseArmorStandEntity> HORSE_ARMOR_STAND = Registry.register(
             Registries.ENTITY_TYPE,
-            new Identifier(HorseArmorStandMod.MOD_ID, "horsearmorstandentity"),
-            FabricEntityTypeBuilder.create(SpawnGroup.MISC, HorseArmorStandEntity::new).dimensions(EntityDimensions.fixed(1.375f, 1.375f)).build());
+            Identifier.of(HorseArmorStandMod.MOD_ID, "horsearmorstandentity"),
+            EntityType.Builder.create(HorseArmorStandEntity::new, SpawnGroup.MISC).dimensions(1.375f, 1.375f).build("horsearmorstandentity"));
 
     public static void registerModEntities(){
         HorseArmorStandMod.LOGGER.info("Registering Mod Entities for" + HorseArmorStandMod.MOD_ID);
