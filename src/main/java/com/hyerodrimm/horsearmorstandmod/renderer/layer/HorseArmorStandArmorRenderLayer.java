@@ -28,22 +28,15 @@ public class HorseArmorStandArmorRenderLayer extends GeoRenderLayer<HorseArmorSt
 
         if (!itemStack.isEmpty() && itemStack.getItem() instanceof AnimalArmorItem horseArmorItem) {
             if (horseArmorItem.getType() == AnimalArmorItem.Type.EQUESTRIAN) {
-                float r;
-                float b;
-                float g;
+                int m;
                 if (itemStack.isIn(ItemTags.DYEABLE)) {
-                    int m = DyedColorComponent.getColor(itemStack, -6265536);
-                    r = (float) ColorHelper.Argb.getRed(m) / 255.0F;
-                    g = (float) ColorHelper.Argb.getGreen(m) / 255.0F;
-                    b = (float) ColorHelper.Argb.getBlue(m) / 255.0F;
+                    m = DyedColorComponent.getColor(itemStack, -6265536);
                 } else {
-                    r = 1.0f;
-                    g = 1.0f;
-                    b = 1.0f;
+                    m = -1;
                 }
 
                 RenderLayer armorRenderLayer = RenderLayer.getArmorCutoutNoCull(horseArmorItem.getEntityTexture());
-                getRenderer().reRender(getDefaultBakedModel(animatable), poseStack, bufferSource, animatable, armorRenderLayer, bufferSource.getBuffer(armorRenderLayer), partialTick, packedLight, OverlayTexture.DEFAULT_UV, r, g, b, 1);
+                getRenderer().reRender(getDefaultBakedModel(animatable), poseStack, bufferSource, animatable, armorRenderLayer, bufferSource.getBuffer(armorRenderLayer), partialTick, packedLight, OverlayTexture.DEFAULT_UV, m);
             }
         }
     }

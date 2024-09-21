@@ -17,7 +17,7 @@ public class ModItems {
         entries.add(HORSE_ARMOR_STAND_ITEM);
     }
     private static Item registerItem(String name, Item item){
-        return Registry.register(Registries.ITEM, new Identifier(HorseArmorStandMod.MOD_ID, name), item);
+        return Registry.register(Registries.ITEM, Identifier.of(HorseArmorStandMod.MOD_ID, name), item);
     }
     public static void registerModItems(){
         HorseArmorStandMod.LOGGER.info("Registering Mod Items for" + HorseArmorStandMod.MOD_ID);

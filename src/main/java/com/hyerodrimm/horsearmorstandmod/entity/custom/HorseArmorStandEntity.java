@@ -1,7 +1,6 @@
 package com.hyerodrimm.horsearmorstandmod.entity.custom;
 
 
-import com.hyerodrimm.horsearmorstandmod.HorseArmorStandMod;
 import com.hyerodrimm.horsearmorstandmod.entity.ModEntities;
 import com.hyerodrimm.horsearmorstandmod.item.ModItems;
 import net.minecraft.block.Block;
@@ -15,12 +14,10 @@ import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
-import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.projectile.PersistentProjectileEntity;
 import net.minecraft.entity.vehicle.AbstractMinecartEntity;
 import net.minecraft.item.AnimalArmorItem;
-import net.minecraft.item.ArmorStandItem;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
@@ -80,7 +77,8 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
     public static final TrackedData<EulerAngle> TRACKER_LEFT_LEG_ROTATION = DataTracker.registerData(ArmorStandEntity.class, TrackedDataHandlerRegistry.ROTATION);
     public static final TrackedData<EulerAngle> TRACKER_RIGHT_LEG_ROTATION = DataTracker.registerData(ArmorStandEntity.class, TrackedDataHandlerRegistry.ROTATION);*/
     private static final Predicate<Entity> RIDEABLE_MINECART_PREDICATE = entity -> entity instanceof AbstractMinecartEntity && ((AbstractMinecartEntity) entity).getMinecartType() == AbstractMinecartEntity.Type.RIDEABLE;
-    private final DefaultedList<ItemStack> armorItems = DefaultedList.ofSize(4, ItemStack.EMPTY);
+    private final DefaultedList<ItemStack> armorItems = DefaultedList.ofSize(4, ItemStack.EMPTY);;
+    private ItemStack bodyArmor = ItemStack.EMPTY;
     private boolean invisible;
     public long lastHitTime;
     private int disabledSlots;
@@ -135,20 +133,15 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
         this.dataTracker.startTracking(TRACKER_RIGHT_LEG_ROTATION, DEFAULT_RIGHT_LEG_ROTATION);*/
     }
 
-    @Override
-    public Iterable<ItemStack> getArmorItems() {
-        return this.armorItems;
-    }
-
     public ItemStack getArmorType() {
-        return this.getEquippedStack(EquipmentSlot.CHEST);
+        return this.bodyArmor;
     }
 
     @Override
     public ItemStack getEquippedStack(EquipmentSlot slot) {
         switch (slot.getType()) {
-            case ARMOR: {
-                return this.armorItems.get(slot.getEntitySlotId());
+            case ANIMAL_ARMOR: {
+                return this.bodyArmor;
             }
         }
         return ItemStack.EMPTY;
@@ -158,25 +151,21 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
     public void equipStack(EquipmentSlot slot, ItemStack stack) {
         this.processEquippedStack(stack);
         switch (slot.getType()) {
-            case ARMOR: {
-                this.onEquipStack(slot, this.armorItems.set(slot.getEntitySlotId(), stack), stack);
+            case ANIMAL_ARMOR: {
+                this.bodyArmor = stack;
             }
         }
     }
 
     @Override
     public boolean canEquip(ItemStack stack) {
-        return !stack.isEmpty() && stack.getItem() instanceof AnimalArmorItem && this.getArmorType().isEmpty() && !this.isSlotDisabled(EquipmentSlot.CHEST);
+        return !stack.isEmpty() && stack.getItem() instanceof AnimalArmorItem && this.getArmorType().isEmpty() && !this.isSlotDisabled(EquipmentSlot.BODY);
     }
 
     @Override
     public void writeCustomDataToNbt(NbtCompound nbt) {
         super.writeCustomDataToNbt(nbt);
-        NbtList nbtList = new NbtList();
-        for (ItemStack itemStack : this.armorItems) {
-            nbtList.add(itemStack.encodeAllowEmpty(this.getRegistryManager()));
-        }
-        nbt.put("ArmorItems", nbtList);
+        nbt.put("BodyArmor", this.bodyArmor.encodeAllowEmpty(this.getRegistryManager()));
         nbt.putBoolean("Invisible", this.isInvisible());
         nbt.putBoolean("Small", this.isSmall());
         nbt.putInt("DisabledSlots", this.disabledSlots);
@@ -190,16 +179,9 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
 
     @Override
     public void readCustomDataFromNbt(NbtCompound nbt) {
-        int i;
-        NbtList nbtList;
         super.readCustomDataFromNbt(nbt);
-        if (nbt.contains("ArmorItems", NbtElement.LIST_TYPE)) {
-            nbtList = nbt.getList("ArmorItems", NbtElement.COMPOUND_TYPE);
-
-            for(i = 0; i < this.armorItems.size(); ++i) {
-                NbtCompound nbtCompound = nbtList.getCompound(i);
-                this.armorItems.set(i, ItemStack.fromNbtOrEmpty(this.getRegistryManager(), nbtCompound));
-            }
+        if (nbt.contains("BodyArmor", NbtElement.COMPOUND_TYPE)) {
+            this.bodyArmor = ItemStack.fromNbtOrEmpty(this.getRegistryManager(), nbt.getCompound("ArmorItems"));
         }
         this.setInvisible(nbt.getBoolean("Invisible"));
         this.setSmall(nbt.getBoolean("Small"));
@@ -285,14 +267,11 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
         }
 
         if (itemStack.isEmpty()) {
-            if (this.hasStackEquipped(EquipmentSlot.CHEST) && this.equip(player, EquipmentSlot.CHEST, itemStack, hand)) {
+            if (!this.bodyArmor.isEmpty() && this.equip(player, EquipmentSlot.BODY, itemStack, hand)) {
                 return ActionResult.SUCCESS;
             }
-        } else if (itemStack.getItem() instanceof AnimalArmorItem && !this.isSlotDisabled(EquipmentSlot.CHEST)) {
-            if (this.isSlotDisabled(EquipmentSlot.CHEST)) {
-                return ActionResult.FAIL;
-            }
-            if (this.equip(player, EquipmentSlot.CHEST, itemStack, hand)) {
+        } else if (isHorseArmor(itemStack)) {
+            if (this.equip(player, EquipmentSlot.BODY, itemStack, hand)) {
                 return ActionResult.SUCCESS;
             }
         }
@@ -330,63 +309,73 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
 
     @Override
     public boolean damage(DamageSource source, float amount) {
-        if (this.getWorld().isClient || this.isRemoved()) {
+        if (this.isRemoved()) {
             return false;
-        }
-        if (source.isIn(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
-            this.kill();
-            return false;
-        }
-        if (this.isInvulnerableTo(source) || this.invisible || this.isMarker()) {
-            return false;
-        }
-        if (source.isIn(DamageTypeTags.IS_EXPLOSION)) {
-            this.onBreak(source);
-            this.kill();
-            return false;
-        }
-        if (source.isIn(DamageTypeTags.IGNITES_ARMOR_STANDS)) {
-            if (this.isOnFire()) {
-                this.updateHealth(source, 0.15f);
+        } else {
+            World var4 = this.getWorld();
+            if (var4 instanceof ServerWorld) {
+                ServerWorld serverWorld = (ServerWorld)var4;
+                if (source.isIn(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
+                    this.kill();
+                    return false;
+                } else if (!this.isInvulnerableTo(source) && !this.invisible && !this.isMarker()) {
+                    if (source.isIn(DamageTypeTags.IS_EXPLOSION)) {
+                        this.onBreak(serverWorld, source);
+                        this.kill();
+                        return false;
+                    } else if (source.isIn(DamageTypeTags.IGNITES_ARMOR_STANDS)) {
+                        if (this.isOnFire()) {
+                            this.updateHealth(serverWorld, source, 0.15F);
+                        } else {
+                            this.setOnFireFor(5.0F);
+                        }
+
+                        return false;
+                    } else if (source.isIn(DamageTypeTags.BURNS_ARMOR_STANDS) && this.getHealth() > 0.5F) {
+                        this.updateHealth(serverWorld, source, 4.0F);
+                        return false;
+                    } else {
+                        boolean bl = source.isIn(DamageTypeTags.CAN_BREAK_ARMOR_STAND);
+                        boolean bl2 = source.isIn(DamageTypeTags.ALWAYS_KILLS_ARMOR_STANDS);
+                        if (!bl && !bl2) {
+                            return false;
+                        } else {
+                            Entity var7 = source.getAttacker();
+                            if (var7 instanceof PlayerEntity) {
+                                PlayerEntity playerEntity = (PlayerEntity)var7;
+                                if (!playerEntity.getAbilities().allowModifyWorld) {
+                                    return false;
+                                }
+                            }
+
+                            if (source.isSourceCreativePlayer()) {
+                                this.playBreakSound();
+                                this.spawnBreakParticles();
+                                this.kill();
+                                return true;
+                            } else {
+                                long l = serverWorld.getTime();
+                                if (l - this.lastHitTime > 5L && !bl2) {
+                                    serverWorld.sendEntityStatus(this, (byte)32);
+                                    this.emitGameEvent(GameEvent.ENTITY_DAMAGE, source.getAttacker());
+                                    this.lastHitTime = l;
+                                } else {
+                                    this.breakAndDropItem(serverWorld, source);
+                                    this.spawnBreakParticles();
+                                    this.kill();
+                                }
+
+                                return true;
+                            }
+                        }
+                    }
+                } else {
+                    return false;
+                }
             } else {
-                this.setOnFireFor(5);
-            }
-            return false;
-        }
-        if (source.isIn(DamageTypeTags.BURNS_ARMOR_STANDS) && this.getHealth() > 0.5f) {
-            this.updateHealth(source, 4.0f);
-            return false;
-        }
-        boolean bl = source.getSource() instanceof PersistentProjectileEntity;
-        boolean bl2 = bl && ((PersistentProjectileEntity) source.getSource()).getPierceLevel() > 0;
-        boolean bl3 = "player".equals(source.getName());
-        if (!bl3 && !bl) {
-            return false;
-        }
-        Entity entity = source.getAttacker();
-        if (entity instanceof PlayerEntity) {
-            PlayerEntity playerEntity = (PlayerEntity) entity;
-            if (!playerEntity.getAbilities().allowModifyWorld) {
                 return false;
             }
         }
-        if (source.isSourceCreativePlayer()) {
-            this.playBreakSound();
-            this.spawnBreakParticles();
-            this.kill();
-            return bl2;
-        }
-        long l = this.getWorld().getTime();
-        if (l - this.lastHitTime <= 5L || bl) {
-            this.breakAndDropItem(source);
-            this.spawnBreakParticles();
-            this.kill();
-        } else {
-            this.getWorld().sendEntityStatus(this, EntityStatuses.HIT_ARMOR_STAND);
-            this.emitGameEvent(GameEvent.ENTITY_DAMAGE, source.getAttacker());
-            this.lastHitTime = l;
-        }
-        return true;
     }
 
     @Override
@@ -399,6 +388,11 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
         } else {
             super.handleStatus(status);
         }
+    }
+
+    @Override
+    public Iterable<ItemStack> getArmorItems() {
+        return this.armorItems;
     }
 
     @Override
@@ -416,34 +410,33 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
         }
     }
 
-    private void updateHealth(DamageSource damageSource, float amount) {
+    private void updateHealth(ServerWorld world, DamageSource damageSource, float amount) {
         float f = this.getHealth();
-        if ((f -= amount) <= 0.5f) {
-            this.onBreak(damageSource);
+        f -= amount;
+        if (f <= 0.5F) {
+            this.onBreak(world, damageSource);
             this.kill();
         } else {
             this.setHealth(f);
             this.emitGameEvent(GameEvent.ENTITY_DAMAGE, damageSource.getAttacker());
         }
+
     }
 
-    private void breakAndDropItem(DamageSource damageSource) {
+    private void breakAndDropItem(ServerWorld world, DamageSource damageSource) {
         ItemStack itemStack = new ItemStack(ModItems.HORSE_ARMOR_STAND_ITEM);
         itemStack.set(DataComponentTypes.CUSTOM_NAME, this.getCustomName());
         Block.dropStack(this.getWorld(), this.getBlockPos(), itemStack);
-        this.onBreak(damageSource);
+        this.onBreak(world, damageSource);
     }
 
-    private void onBreak(DamageSource damageSource) {
-        ItemStack itemStack;
-        int i;
+    private void onBreak(ServerWorld world, DamageSource damageSource) {
         this.playBreakSound();
-        this.drop(damageSource);
-        for (i = 0; i < this.armorItems.size(); ++i) {
-            itemStack = this.armorItems.get(i);
-            if (itemStack.isEmpty()) continue;
-            Block.dropStack(this.getWorld(), this.getBlockPos().up(), itemStack);
-            this.armorItems.set(i, ItemStack.EMPTY);
+        this.drop(world, damageSource);
+
+        if (!this.bodyArmor.isEmpty()) {
+            Block.dropStack(this.getWorld(), this.getBlockPos().up(), this.bodyArmor);
+            this.bodyArmor = ItemStack.EMPTY;
         }
     }
 
@@ -741,6 +734,16 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
         return !this.isInvisible() && !this.isMarker();
     }
 
+    public boolean isHorseArmor(ItemStack stack) {
+        Item var3 = stack.getItem();
+        if (var3 instanceof AnimalArmorItem animalArmorItem) {
+            if (animalArmorItem.getType() == AnimalArmorItem.Type.EQUESTRIAN) {
+                return true;
+            }
+        }
+
+        return false;
+    }
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllerRegistrar) {
         controllerRegistrar.add(new AnimationController<>(this, "controller", 0, this::predicate));

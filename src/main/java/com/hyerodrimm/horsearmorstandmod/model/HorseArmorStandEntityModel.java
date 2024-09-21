@@ -10,16 +10,16 @@ public class HorseArmorStandEntityModel extends GeoModel<HorseArmorStandEntity> 
 
     @Override
     public Identifier getModelResource(HorseArmorStandEntity animatable) {
-        return new Identifier(HorseArmorStandMod.MOD_ID, "geo/horsearmorstand.geo.json");
+        return Identifier.of(HorseArmorStandMod.MOD_ID, "geo/horsearmorstand.geo.json");
     }
 
     @Override
     public Identifier getTextureResource(HorseArmorStandEntity animatable) {
-        return new Identifier(HorseArmorStandMod.MOD_ID, "textures/entity/horsearmorstandentity.png");
+        return Identifier.of(HorseArmorStandMod.MOD_ID, "textures/entity/horsearmorstandentity.png");
     }
 
     @Override
     public Identifier getAnimationResource(HorseArmorStandEntity animatable) {
-        return new Identifier(HorseArmorStandMod.MOD_ID, "animations/horsearmorstand.animation.json");
+        return Identifier.of(HorseArmorStandMod.MOD_ID, "animations/horsearmorstand.animation.json");
     }
 }
