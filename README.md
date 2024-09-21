@@ -7,7 +7,7 @@ It should work with no problem with any mods, that add vanilla-looking (without 
 ## How to obtain
 Well you see it's quite simple, you need to craft it like this:
 
-![Alt text](https://cdn.modrinth.com/data/9CbsP5lC/images/fb045f5abc302de4e4ad808aeed506d950617f62.png)
+![How To Craft](https://cdn.modrinth.com/data/9CbsP5lC/images/3cb6e4cf7696da1edc1cc74b5769fabbabc14659.png)
 
 Then you can use it just as a classic armor stand.
 

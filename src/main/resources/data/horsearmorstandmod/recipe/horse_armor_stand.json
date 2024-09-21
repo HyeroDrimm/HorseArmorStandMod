@@ -13,12 +13,12 @@
     }
   },
   "pattern": [
-    "/  ",
+    "  /",
     "###",
     "/_/"
   ],
   "result": {
-    "item": "horsearmorstandmod:horsearmorstanditem"
+    "id": "horsearmorstandmod:horsearmorstanditem"
   },
   "show_notification": true
 }

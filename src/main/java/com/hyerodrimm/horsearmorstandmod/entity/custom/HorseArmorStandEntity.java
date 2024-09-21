@@ -22,7 +22,6 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
-import net.minecraft.nbt.NbtList;
 import net.minecraft.particle.BlockStateParticleEffect;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.tag.DamageTypeTags;
@@ -50,45 +49,23 @@ import software.bernie.geckolib.animation.AnimationState;
 import java.util.List;
 import java.util.function.Predicate;
 
-import static org.apache.commons.lang3.Validate.isAssignableFrom;
 
 public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
     protected static final RawAnimation SWAY_ANIMATION = RawAnimation.begin().then("animation.horsearmorstand.sway", Animation.LoopType.PLAY_ONCE);
     private boolean playSwayAnimation = false;
     private AnimatableInstanceCache cache = new SingletonAnimatableInstanceCache(this);
-    // POSES
-    /*private static final EulerAngle DEFAULT_HEAD_ROTATION = new EulerAngle(0.0f, 0.0f, 0.0f);
-    private static final EulerAngle DEFAULT_BODY_ROTATION = new EulerAngle(0.0f, 0.0f, 0.0f);
-    private static final EulerAngle DEFAULT_LEFT_ARM_ROTATION = new EulerAngle(-10.0f, 0.0f, -10.0f);
-    private static final EulerAngle DEFAULT_RIGHT_ARM_ROTATION = new EulerAngle(-15.0f, 0.0f, 10.0f);
-    private static final EulerAngle DEFAULT_LEFT_LEG_ROTATION = new EulerAngle(-1.0f, 0.0f, -1.0f);
-    private static final EulerAngle DEFAULT_RIGHT_LEG_ROTATION = new EulerAngle(1.0f, 0.0f, 1.0f);*/
     private static final EntityDimensions MARKER_DIMENSIONS = EntityDimensions.fixed(0.0F, 0.0F);
     private static final EntityDimensions SMALL_DIMENSIONS = ModEntities.HORSE_ARMOR_STAND.getDimensions().scaled(0.5f);
     public static final int SMALL_FLAG = 1;
     public static final int HIDE_BASE_PLATE_FLAG = 8;
     public static final int MARKER_FLAG = 16;
     public static final TrackedData<Byte> HORSE_ARMOR_STAND_FLAGS = DataTracker.registerData(HorseArmorStandEntity.class, TrackedDataHandlerRegistry.BYTE);
-    // POSES
-/*    public static final TrackedData<EulerAngle> TRACKER_HEAD_ROTATION = DataTracker.registerData(ArmorStandEntity.class, TrackedDataHandlerRegistry.ROTATION);
-    public static final TrackedData<EulerAngle> TRACKER_BODY_ROTATION = DataTracker.registerData(ArmorStandEntity.class, TrackedDataHandlerRegistry.ROTATION);
-    public static final TrackedData<EulerAngle> TRACKER_LEFT_ARM_ROTATION = DataTracker.registerData(ArmorStandEntity.class, TrackedDataHandlerRegistry.ROTATION);
-    public static final TrackedData<EulerAngle> TRACKER_RIGHT_ARM_ROTATION = DataTracker.registerData(ArmorStandEntity.class, TrackedDataHandlerRegistry.ROTATION);
-    public static final TrackedData<EulerAngle> TRACKER_LEFT_LEG_ROTATION = DataTracker.registerData(ArmorStandEntity.class, TrackedDataHandlerRegistry.ROTATION);
-    public static final TrackedData<EulerAngle> TRACKER_RIGHT_LEG_ROTATION = DataTracker.registerData(ArmorStandEntity.class, TrackedDataHandlerRegistry.ROTATION);*/
     private static final Predicate<Entity> RIDEABLE_MINECART_PREDICATE = entity -> entity instanceof AbstractMinecartEntity && ((AbstractMinecartEntity) entity).getMinecartType() == AbstractMinecartEntity.Type.RIDEABLE;
     private final DefaultedList<ItemStack> armorItems = DefaultedList.ofSize(4, ItemStack.EMPTY);;
     private ItemStack bodyArmor = ItemStack.EMPTY;
     private boolean invisible;
     public long lastHitTime;
     private int disabledSlots;
-    // POSES
-/*    private EulerAngle headRotation = DEFAULT_HEAD_ROTATION;
-    private EulerAngle bodyRotation = DEFAULT_BODY_ROTATION;
-    private EulerAngle leftArmRotation = DEFAULT_LEFT_ARM_ROTATION;
-    private EulerAngle rightArmRotation = DEFAULT_RIGHT_ARM_ROTATION;
-    private EulerAngle leftLegRotation = DEFAULT_LEFT_LEG_ROTATION;
-    private EulerAngle rightLegRotation = DEFAULT_RIGHT_LEG_ROTATION;*/
 
     public HorseArmorStandEntity(EntityType<? extends HorseArmorStandEntity> entityType, World world) {
         super((EntityType<? extends LivingEntity>) entityType, world);
@@ -97,11 +74,6 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
     public static DefaultAttributeContainer.Builder createArmorStandAttributes() {
         return createLivingAttributes().add(EntityAttributes.GENERIC_STEP_HEIGHT, 0.0);
     }
-
-/*    public HorseArmorStandEntity(World world, double x, double y, double z) {
-        this((EntityType<? extends HorseArmorStandEntity>) ModEntities.HORSE_ARMOR_STAND, world);
-        this.setPosition(x, y, z);
-    }*/
 
     @Override
     public void calculateDimensions() {
@@ -124,13 +96,6 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
     protected void initDataTracker(DataTracker.Builder builder) {
         super.initDataTracker(builder);
         builder.add(HORSE_ARMOR_STAND_FLAGS, (byte)0);
-        // POSES
-/*        this.dataTracker.startTracking(TRACKER_HEAD_ROTATION, DEFAULT_HEAD_ROTATION);
-        this.dataTracker.startTracking(TRACKER_BODY_ROTATION, DEFAULT_BODY_ROTATION);
-        this.dataTracker.startTracking(TRACKER_LEFT_ARM_ROTATION, DEFAULT_LEFT_ARM_ROTATION);
-        this.dataTracker.startTracking(TRACKER_RIGHT_ARM_ROTATION, DEFAULT_RIGHT_ARM_ROTATION);
-        this.dataTracker.startTracking(TRACKER_LEFT_LEG_ROTATION, DEFAULT_LEFT_LEG_ROTATION);
-        this.dataTracker.startTracking(TRACKER_RIGHT_LEG_ROTATION, DEFAULT_RIGHT_LEG_ROTATION);*/
     }
 
     public ItemStack getArmorType() {
@@ -165,7 +130,7 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
     @Override
     public void writeCustomDataToNbt(NbtCompound nbt) {
         super.writeCustomDataToNbt(nbt);
-        nbt.put("BodyArmor", this.bodyArmor.encodeAllowEmpty(this.getRegistryManager()));
+        nbt.put("BodyArmor", this.bodyArmor.encode(this.getRegistryManager()));
         nbt.putBoolean("Invisible", this.isInvisible());
         nbt.putBoolean("Small", this.isSmall());
         nbt.putInt("DisabledSlots", this.disabledSlots);
@@ -173,15 +138,15 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
         if (this.isMarker()) {
             nbt.putBoolean("Marker", this.isMarker());
         }
-        // POSES
-        //nbt.put("Pose", this.poseToNbt());
     }
 
     @Override
     public void readCustomDataFromNbt(NbtCompound nbt) {
         super.readCustomDataFromNbt(nbt);
         if (nbt.contains("BodyArmor", NbtElement.COMPOUND_TYPE)) {
-            this.bodyArmor = ItemStack.fromNbtOrEmpty(this.getRegistryManager(), nbt.getCompound("ArmorItems"));
+            this.bodyArmor = ItemStack.fromNbt(this.getRegistryManager(), nbt.getCompound("BodyArmor")).orElse(ItemStack.EMPTY);
+        } else {
+            this.bodyArmor = ItemStack.EMPTY;
         }
         this.setInvisible(nbt.getBoolean("Invisible"));
         this.setSmall(nbt.getBoolean("Small"));
@@ -189,50 +154,7 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
         this.setHideBasePlate(nbt.getBoolean("NoBasePlate"));
         this.setMarker(nbt.getBoolean("Marker"));
         this.noClip = !this.canClip();
-        // POSES
-/*        NbtCompound nbtCompound = nbt.getCompound("Pose");
-        this.readPoseNbt(nbtCompound);*/
     }
-
-    // POSES
-    /*private void readPoseNbt(NbtCompound nbt) {
-        NbtList nbtList = nbt.getList("Head", NbtElement.FLOAT_TYPE);
-        this.setHeadRotation(nbtList.isEmpty() ? DEFAULT_HEAD_ROTATION : new EulerAngle(nbtList));
-        NbtList nbtList2 = nbt.getList("Body", NbtElement.FLOAT_TYPE);
-        this.setBodyRotation(nbtList2.isEmpty() ? DEFAULT_BODY_ROTATION : new EulerAngle(nbtList2));
-        NbtList nbtList3 = nbt.getList("LeftArm", NbtElement.FLOAT_TYPE);
-        this.setLeftArmRotation(nbtList3.isEmpty() ? DEFAULT_LEFT_ARM_ROTATION : new EulerAngle(nbtList3));
-        NbtList nbtList4 = nbt.getList("RightArm", NbtElement.FLOAT_TYPE);
-        this.setRightArmRotation(nbtList4.isEmpty() ? DEFAULT_RIGHT_ARM_ROTATION : new EulerAngle(nbtList4));
-        NbtList nbtList5 = nbt.getList("LeftLeg", NbtElement.FLOAT_TYPE);
-        this.setLeftLegRotation(nbtList5.isEmpty() ? DEFAULT_LEFT_LEG_ROTATION : new EulerAngle(nbtList5));
-        NbtList nbtList6 = nbt.getList("RightLeg", NbtElement.FLOAT_TYPE);
-        this.setRightLegRotation(nbtList6.isEmpty() ? DEFAULT_RIGHT_LEG_ROTATION : new EulerAngle(nbtList6));
-    }*/
-
-    // POSES
-    /*private NbtCompound poseToNbt() {
-        NbtCompound nbtCompound = new NbtCompound();
-        if (!DEFAULT_HEAD_ROTATION.equals(this.headRotation)) {
-            nbtCompound.put("Head", this.headRotation.toNbt());
-        }
-        if (!DEFAULT_BODY_ROTATION.equals(this.bodyRotation)) {
-            nbtCompound.put("Body", this.bodyRotation.toNbt());
-        }
-        if (!DEFAULT_LEFT_ARM_ROTATION.equals(this.leftArmRotation)) {
-            nbtCompound.put("LeftArm", this.leftArmRotation.toNbt());
-        }
-        if (!DEFAULT_RIGHT_ARM_ROTATION.equals(this.rightArmRotation)) {
-            nbtCompound.put("RightArm", this.rightArmRotation.toNbt());
-        }
-        if (!DEFAULT_LEFT_LEG_ROTATION.equals(this.leftLegRotation)) {
-            nbtCompound.put("LeftLeg", this.leftLegRotation.toNbt());
-        }
-        if (!DEFAULT_RIGHT_LEG_ROTATION.equals(this.rightLegRotation)) {
-            nbtCompound.put("RightLeg", this.rightLegRotation.toNbt());
-        }
-        return nbtCompound;
-    }*/
 
     @Override
     public boolean isPushable() {
@@ -451,16 +373,6 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
         return 0.0f;
     }
 
-/*    @Override
-    protected float getActiveEyeHeight(EntityPose pose, EntityDimensions dimensions) {
-        return dimensions.height * (this.isBaby() ? 0.5f : 0.9f);
-    }
-
-    @Override
-    public double getHeightOffset() {
-        return this.isMarker() ? 0.0 : (double) 0.1f;
-    }*/
-
     @Override
     public void travel(Vec3d movementInput) {
         if (!this.canClip()) {
@@ -483,33 +395,7 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
 
     @Override
     public void tick() {
-        // POSES
-/*        EulerAngle eulerAngle6;
-        EulerAngle eulerAngle5;
-        EulerAngle eulerAngle4;
-        EulerAngle eulerAngle3;
-        EulerAngle eulerAngle2;*/
         super.tick();
-        // POSES
-        /*EulerAngle eulerAngle = this.dataTracker.get(TRACKER_HEAD_ROTATION);
-        if (!this.headRotation.equals(eulerAngle)) {
-            this.setHeadRotation(eulerAngle);
-        }
-        if (!this.bodyRotation.equals(eulerAngle2 = this.dataTracker.get(TRACKER_BODY_ROTATION))) {
-            this.setBodyRotation(eulerAngle2);
-        }
-        if (!this.leftArmRotation.equals(eulerAngle3 = this.dataTracker.get(TRACKER_LEFT_ARM_ROTATION))) {
-            this.setLeftArmRotation(eulerAngle3);
-        }
-        if (!this.rightArmRotation.equals(eulerAngle4 = this.dataTracker.get(TRACKER_RIGHT_ARM_ROTATION))) {
-            this.setRightArmRotation(eulerAngle4);
-        }
-        if (!this.leftLegRotation.equals(eulerAngle5 = this.dataTracker.get(TRACKER_LEFT_LEG_ROTATION))) {
-            this.setLeftLegRotation(eulerAngle5);
-        }
-        if (!this.rightLegRotation.equals(eulerAngle6 = this.dataTracker.get(TRACKER_RIGHT_LEG_ROTATION))) {
-            this.setRightLegRotation(eulerAngle6);
-        }*/
     }
 
     @Override
@@ -538,8 +424,7 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
     public boolean isImmuneToExplosion(Explosion explosion) {
         return this.isInvisible();
     }
-
-
+    
     @Override
     public PistonBehavior getPistonBehavior() {
         if (this.isMarker()) {
@@ -582,61 +467,6 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
         return value;
     }
 
-    // POSES
-    /*public void setHeadRotation(EulerAngle angle) {
-        this.headRotation = angle;
-        this.dataTracker.set(TRACKER_HEAD_ROTATION, angle);
-    }
-
-    public void setBodyRotation(EulerAngle angle) {
-        this.bodyRotation = angle;
-        this.dataTracker.set(TRACKER_BODY_ROTATION, angle);
-    }
-
-    public void setLeftArmRotation(EulerAngle angle) {
-        this.leftArmRotation = angle;
-        this.dataTracker.set(TRACKER_LEFT_ARM_ROTATION, angle);
-    }
-
-    public void setRightArmRotation(EulerAngle angle) {
-        this.rightArmRotation = angle;
-        this.dataTracker.set(TRACKER_RIGHT_ARM_ROTATION, angle);
-    }
-
-    public void setLeftLegRotation(EulerAngle angle) {
-        this.leftLegRotation = angle;
-        this.dataTracker.set(TRACKER_LEFT_LEG_ROTATION, angle);
-    }
-
-    public void setRightLegRotation(EulerAngle angle) {
-        this.rightLegRotation = angle;
-        this.dataTracker.set(TRACKER_RIGHT_LEG_ROTATION, angle);
-    }
-
-    public EulerAngle getHeadRotation() {
-        return this.headRotation;
-    }
-
-    public EulerAngle getBodyRotation() {
-        return this.bodyRotation;
-    }
-
-    public EulerAngle getLeftArmRotation() {
-        return this.leftArmRotation;
-    }
-
-    public EulerAngle getRightArmRotation() {
-        return this.rightArmRotation;
-    }
-
-    public EulerAngle getLeftLegRotation() {
-        return this.leftLegRotation;
-    }
-
-    public EulerAngle getRightLegRotation() {
-        return this.rightLegRotation;
-    }
-*/
     @Override
     public boolean canHit() {
         return super.canHit() && !this.isMarker();
