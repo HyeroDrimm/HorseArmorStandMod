@@ -424,7 +424,7 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
     public boolean isImmuneToExplosion(Explosion explosion) {
         return this.isInvisible();
     }
-    
+
     @Override
     public PistonBehavior getPistonBehavior() {
         if (this.isMarker()) {

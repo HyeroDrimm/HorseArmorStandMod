@@ -1,8 +1,0 @@
-{
-	"required": true,
-	"package": "com.hyerodrimm.horsearmorstandmod.mixin",
-	"compatibilityLevel": "JAVA_21",
-	"injectors": {
-		"defaultRequire": 1
-	}
-}
