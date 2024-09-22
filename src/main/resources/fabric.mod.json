@@ -23,16 +23,14 @@
 			"com.hyerodrimm.horsearmorstandmod.HorseArmorStandModClient"
 		]
 	},
-	"mixins": [
-		"horsearmorstandmod.mixins.json"
-	],
 	"depends": {
 		"fabricloader": ">=0.14.22",
-		"minecraft": ">=1.19.4",
+		"minecraft": ">=1.20.4",
 		"java": ">=17",
 		"fabric-api": "*",
-		"geckolib": ">=4.2.2"
+		"geckolib": "*"
 	},
 	"suggests": {
+		"wolfarmorstand": "*"
 	}
 }

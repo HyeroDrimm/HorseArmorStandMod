@@ -39,6 +39,7 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.LightType;
 import net.minecraft.world.World;
 import net.minecraft.world.event.GameEvent;
+import net.minecraft.world.explosion.Explosion;
 import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.core.animatable.GeoAnimatable;
@@ -464,11 +465,6 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
     }
 
     @Override
-    public double getHeightOffset() {
-        return this.isMarker() ? 0.0 : (double) 0.1f;
-    }
-
-    @Override
     public void travel(Vec3d movementInput) {
         if (!this.canClip()) {
             return;
@@ -542,7 +538,7 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
     }
 
     @Override
-    public boolean isImmuneToExplosion() {
+    public boolean isImmuneToExplosion(Explosion explosion) {
         return this.isInvisible();
     }
 
