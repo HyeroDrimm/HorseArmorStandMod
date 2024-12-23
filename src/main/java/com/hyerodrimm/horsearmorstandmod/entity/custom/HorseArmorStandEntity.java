@@ -130,7 +130,7 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
     @Override
     public void writeCustomDataToNbt(NbtCompound nbt) {
         super.writeCustomDataToNbt(nbt);
-        nbt.put("BodyArmor", this.bodyArmor.encode(this.getRegistryManager()));
+        nbt.put("BodyArmor", this.bodyArmor.encodeAllowEmpty(this.getRegistryManager()));
         nbt.putBoolean("Invisible", this.isInvisible());
         nbt.putBoolean("Small", this.isSmall());
         nbt.putInt("DisabledSlots", this.disabledSlots);
