@@ -1,28 +1,27 @@
 package com.hyerodrimm.horsearmorstandmod.entity.custom;
 
 
-import com.hyerodrimm.horsearmorstandmod.HorseArmorStandMod;
 import com.hyerodrimm.horsearmorstandmod.entity.ModEntities;
 import com.hyerodrimm.horsearmorstandmod.item.ModItems;
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.piston.PistonBehavior;
+import net.minecraft.component.DataComponentTypes;
 import net.minecraft.entity.*;
+import net.minecraft.entity.attribute.DefaultAttributeContainer;
+import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
-import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.projectile.PersistentProjectileEntity;
 import net.minecraft.entity.vehicle.AbstractMinecartEntity;
-import net.minecraft.item.ArmorStandItem;
-import net.minecraft.item.HorseArmorItem;
+import net.minecraft.item.AnimalArmorItem;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
-import net.minecraft.nbt.NbtList;
 import net.minecraft.particle.BlockStateParticleEffect;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.tag.DamageTypeTags;
@@ -39,66 +38,42 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.LightType;
 import net.minecraft.world.World;
 import net.minecraft.world.event.GameEvent;
+import net.minecraft.world.explosion.Explosion;
 import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.animatable.GeoEntity;
-import software.bernie.geckolib.core.animatable.GeoAnimatable;
-import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
-import software.bernie.geckolib.core.animatable.instance.SingletonAnimatableInstanceCache;
-import software.bernie.geckolib.core.animation.*;
-import software.bernie.geckolib.core.animation.AnimationState;
-import software.bernie.geckolib.core.object.PlayState;
-
+import software.bernie.geckolib.animatable.GeoAnimatable;
+import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
+import software.bernie.geckolib.animatable.instance.SingletonAnimatableInstanceCache;
+import software.bernie.geckolib.animation.*;
+import software.bernie.geckolib.animation.AnimationState;
 import java.util.List;
 import java.util.function.Predicate;
 
-import static org.apache.commons.lang3.Validate.isAssignableFrom;
 
 public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
     protected static final RawAnimation SWAY_ANIMATION = RawAnimation.begin().then("animation.horsearmorstand.sway", Animation.LoopType.PLAY_ONCE);
     private boolean playSwayAnimation = false;
     private AnimatableInstanceCache cache = new SingletonAnimatableInstanceCache(this);
-    // POSES
-    /*private static final EulerAngle DEFAULT_HEAD_ROTATION = new EulerAngle(0.0f, 0.0f, 0.0f);
-    private static final EulerAngle DEFAULT_BODY_ROTATION = new EulerAngle(0.0f, 0.0f, 0.0f);
-    private static final EulerAngle DEFAULT_LEFT_ARM_ROTATION = new EulerAngle(-10.0f, 0.0f, -10.0f);
-    private static final EulerAngle DEFAULT_RIGHT_ARM_ROTATION = new EulerAngle(-15.0f, 0.0f, 10.0f);
-    private static final EulerAngle DEFAULT_LEFT_LEG_ROTATION = new EulerAngle(-1.0f, 0.0f, -1.0f);
-    private static final EulerAngle DEFAULT_RIGHT_LEG_ROTATION = new EulerAngle(1.0f, 0.0f, 1.0f);*/
-    private static final EntityDimensions MARKER_DIMENSIONS = new EntityDimensions(0.0f, 0.0f, true);
+    private static final EntityDimensions MARKER_DIMENSIONS = EntityDimensions.fixed(0.0F, 0.0F);
     private static final EntityDimensions SMALL_DIMENSIONS = ModEntities.HORSE_ARMOR_STAND.getDimensions().scaled(0.5f);
     public static final int SMALL_FLAG = 1;
     public static final int HIDE_BASE_PLATE_FLAG = 8;
     public static final int MARKER_FLAG = 16;
     public static final TrackedData<Byte> HORSE_ARMOR_STAND_FLAGS = DataTracker.registerData(HorseArmorStandEntity.class, TrackedDataHandlerRegistry.BYTE);
-    // POSES
-/*    public static final TrackedData<EulerAngle> TRACKER_HEAD_ROTATION = DataTracker.registerData(ArmorStandEntity.class, TrackedDataHandlerRegistry.ROTATION);
-    public static final TrackedData<EulerAngle> TRACKER_BODY_ROTATION = DataTracker.registerData(ArmorStandEntity.class, TrackedDataHandlerRegistry.ROTATION);
-    public static final TrackedData<EulerAngle> TRACKER_LEFT_ARM_ROTATION = DataTracker.registerData(ArmorStandEntity.class, TrackedDataHandlerRegistry.ROTATION);
-    public static final TrackedData<EulerAngle> TRACKER_RIGHT_ARM_ROTATION = DataTracker.registerData(ArmorStandEntity.class, TrackedDataHandlerRegistry.ROTATION);
-    public static final TrackedData<EulerAngle> TRACKER_LEFT_LEG_ROTATION = DataTracker.registerData(ArmorStandEntity.class, TrackedDataHandlerRegistry.ROTATION);
-    public static final TrackedData<EulerAngle> TRACKER_RIGHT_LEG_ROTATION = DataTracker.registerData(ArmorStandEntity.class, TrackedDataHandlerRegistry.ROTATION);*/
     private static final Predicate<Entity> RIDEABLE_MINECART_PREDICATE = entity -> entity instanceof AbstractMinecartEntity && ((AbstractMinecartEntity) entity).getMinecartType() == AbstractMinecartEntity.Type.RIDEABLE;
-    private final DefaultedList<ItemStack> armorItems = DefaultedList.ofSize(4, ItemStack.EMPTY);
+    private final DefaultedList<ItemStack> armorItems = DefaultedList.ofSize(4, ItemStack.EMPTY);;
+    private ItemStack bodyArmor = ItemStack.EMPTY;
     private boolean invisible;
     public long lastHitTime;
     private int disabledSlots;
-    // POSES
-/*    private EulerAngle headRotation = DEFAULT_HEAD_ROTATION;
-    private EulerAngle bodyRotation = DEFAULT_BODY_ROTATION;
-    private EulerAngle leftArmRotation = DEFAULT_LEFT_ARM_ROTATION;
-    private EulerAngle rightArmRotation = DEFAULT_RIGHT_ARM_ROTATION;
-    private EulerAngle leftLegRotation = DEFAULT_LEFT_LEG_ROTATION;
-    private EulerAngle rightLegRotation = DEFAULT_RIGHT_LEG_ROTATION;*/
 
     public HorseArmorStandEntity(EntityType<? extends HorseArmorStandEntity> entityType, World world) {
         super((EntityType<? extends LivingEntity>) entityType, world);
-        this.setStepHeight(0.0f);
     }
 
-/*    public HorseArmorStandEntity(World world, double x, double y, double z) {
-        this((EntityType<? extends HorseArmorStandEntity>) ModEntities.HORSE_ARMOR_STAND, world);
-        this.setPosition(x, y, z);
-    }*/
+    public static DefaultAttributeContainer.Builder createArmorStandAttributes() {
+        return createLivingAttributes().add(EntityAttributes.GENERIC_STEP_HEIGHT, 0.0);
+    }
 
     @Override
     public void calculateDimensions() {
@@ -118,33 +93,20 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
         return super.canMoveVoluntarily() && this.canClip();
     }
 
-    @Override
-    protected void initDataTracker() {
-        super.initDataTracker();
-        this.dataTracker.startTracking(HORSE_ARMOR_STAND_FLAGS, (byte) 0);
-        // POSES
-/*        this.dataTracker.startTracking(TRACKER_HEAD_ROTATION, DEFAULT_HEAD_ROTATION);
-        this.dataTracker.startTracking(TRACKER_BODY_ROTATION, DEFAULT_BODY_ROTATION);
-        this.dataTracker.startTracking(TRACKER_LEFT_ARM_ROTATION, DEFAULT_LEFT_ARM_ROTATION);
-        this.dataTracker.startTracking(TRACKER_RIGHT_ARM_ROTATION, DEFAULT_RIGHT_ARM_ROTATION);
-        this.dataTracker.startTracking(TRACKER_LEFT_LEG_ROTATION, DEFAULT_LEFT_LEG_ROTATION);
-        this.dataTracker.startTracking(TRACKER_RIGHT_LEG_ROTATION, DEFAULT_RIGHT_LEG_ROTATION);*/
-    }
-
-    @Override
-    public Iterable<ItemStack> getArmorItems() {
-        return this.armorItems;
+    protected void initDataTracker(DataTracker.Builder builder) {
+        super.initDataTracker(builder);
+        builder.add(HORSE_ARMOR_STAND_FLAGS, (byte)0);
     }
 
     public ItemStack getArmorType() {
-        return this.getEquippedStack(EquipmentSlot.CHEST);
+        return this.bodyArmor;
     }
 
     @Override
     public ItemStack getEquippedStack(EquipmentSlot slot) {
         switch (slot.getType()) {
-            case ARMOR: {
-                return this.armorItems.get(slot.getEntitySlotId());
+            case ANIMAL_ARMOR: {
+                return this.bodyArmor;
             }
         }
         return ItemStack.EMPTY;
@@ -154,29 +116,21 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
     public void equipStack(EquipmentSlot slot, ItemStack stack) {
         this.processEquippedStack(stack);
         switch (slot.getType()) {
-            case ARMOR: {
-                this.onEquipStack(slot, this.armorItems.set(slot.getEntitySlotId(), stack), stack);
+            case ANIMAL_ARMOR: {
+                this.bodyArmor = stack;
             }
         }
     }
 
     @Override
     public boolean canEquip(ItemStack stack) {
-        return !stack.isEmpty() && stack.getItem() instanceof HorseArmorItem && this.getArmorType().isEmpty() && !this.isSlotDisabled(EquipmentSlot.CHEST);
+        return !stack.isEmpty() && stack.getItem() instanceof AnimalArmorItem && this.getArmorType().isEmpty() && !this.isSlotDisabled(EquipmentSlot.BODY);
     }
 
     @Override
     public void writeCustomDataToNbt(NbtCompound nbt) {
         super.writeCustomDataToNbt(nbt);
-        NbtList nbtList = new NbtList();
-        for (ItemStack itemStack : this.armorItems) {
-            NbtCompound nbtCompound = new NbtCompound();
-            if (!itemStack.isEmpty()) {
-                itemStack.writeNbt(nbtCompound);
-            }
-            nbtList.add(nbtCompound);
-        }
-        nbt.put("ArmorItems", nbtList);
+        nbt.put("BodyArmor", this.bodyArmor.encodeAllowEmpty(this.getRegistryManager()));
         nbt.putBoolean("Invisible", this.isInvisible());
         nbt.putBoolean("Small", this.isSmall());
         nbt.putInt("DisabledSlots", this.disabledSlots);
@@ -184,20 +138,15 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
         if (this.isMarker()) {
             nbt.putBoolean("Marker", this.isMarker());
         }
-        // POSES
-        //nbt.put("Pose", this.poseToNbt());
     }
 
     @Override
     public void readCustomDataFromNbt(NbtCompound nbt) {
-        int i;
-        NbtList nbtList;
         super.readCustomDataFromNbt(nbt);
-        if (nbt.contains("ArmorItems", NbtElement.LIST_TYPE)) {
-            nbtList = nbt.getList("ArmorItems", NbtElement.COMPOUND_TYPE);
-            for (i = 0; i < this.armorItems.size(); ++i) {
-                this.armorItems.set(i, ItemStack.fromNbt(nbtList.getCompound(i)));
-            }
+        if (nbt.contains("BodyArmor", NbtElement.COMPOUND_TYPE)) {
+            this.bodyArmor = ItemStack.fromNbt(this.getRegistryManager(), nbt.getCompound("BodyArmor")).orElse(ItemStack.EMPTY);
+        } else {
+            this.bodyArmor = ItemStack.EMPTY;
         }
         this.setInvisible(nbt.getBoolean("Invisible"));
         this.setSmall(nbt.getBoolean("Small"));
@@ -205,50 +154,7 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
         this.setHideBasePlate(nbt.getBoolean("NoBasePlate"));
         this.setMarker(nbt.getBoolean("Marker"));
         this.noClip = !this.canClip();
-        // POSES
-/*        NbtCompound nbtCompound = nbt.getCompound("Pose");
-        this.readPoseNbt(nbtCompound);*/
     }
-
-    // POSES
-    /*private void readPoseNbt(NbtCompound nbt) {
-        NbtList nbtList = nbt.getList("Head", NbtElement.FLOAT_TYPE);
-        this.setHeadRotation(nbtList.isEmpty() ? DEFAULT_HEAD_ROTATION : new EulerAngle(nbtList));
-        NbtList nbtList2 = nbt.getList("Body", NbtElement.FLOAT_TYPE);
-        this.setBodyRotation(nbtList2.isEmpty() ? DEFAULT_BODY_ROTATION : new EulerAngle(nbtList2));
-        NbtList nbtList3 = nbt.getList("LeftArm", NbtElement.FLOAT_TYPE);
-        this.setLeftArmRotation(nbtList3.isEmpty() ? DEFAULT_LEFT_ARM_ROTATION : new EulerAngle(nbtList3));
-        NbtList nbtList4 = nbt.getList("RightArm", NbtElement.FLOAT_TYPE);
-        this.setRightArmRotation(nbtList4.isEmpty() ? DEFAULT_RIGHT_ARM_ROTATION : new EulerAngle(nbtList4));
-        NbtList nbtList5 = nbt.getList("LeftLeg", NbtElement.FLOAT_TYPE);
-        this.setLeftLegRotation(nbtList5.isEmpty() ? DEFAULT_LEFT_LEG_ROTATION : new EulerAngle(nbtList5));
-        NbtList nbtList6 = nbt.getList("RightLeg", NbtElement.FLOAT_TYPE);
-        this.setRightLegRotation(nbtList6.isEmpty() ? DEFAULT_RIGHT_LEG_ROTATION : new EulerAngle(nbtList6));
-    }*/
-
-    // POSES
-    /*private NbtCompound poseToNbt() {
-        NbtCompound nbtCompound = new NbtCompound();
-        if (!DEFAULT_HEAD_ROTATION.equals(this.headRotation)) {
-            nbtCompound.put("Head", this.headRotation.toNbt());
-        }
-        if (!DEFAULT_BODY_ROTATION.equals(this.bodyRotation)) {
-            nbtCompound.put("Body", this.bodyRotation.toNbt());
-        }
-        if (!DEFAULT_LEFT_ARM_ROTATION.equals(this.leftArmRotation)) {
-            nbtCompound.put("LeftArm", this.leftArmRotation.toNbt());
-        }
-        if (!DEFAULT_RIGHT_ARM_ROTATION.equals(this.rightArmRotation)) {
-            nbtCompound.put("RightArm", this.rightArmRotation.toNbt());
-        }
-        if (!DEFAULT_LEFT_LEG_ROTATION.equals(this.leftLegRotation)) {
-            nbtCompound.put("LeftLeg", this.leftLegRotation.toNbt());
-        }
-        if (!DEFAULT_RIGHT_LEG_ROTATION.equals(this.rightLegRotation)) {
-            nbtCompound.put("RightLeg", this.rightLegRotation.toNbt());
-        }
-        return nbtCompound;
-    }*/
 
     @Override
     public boolean isPushable() {
@@ -283,14 +189,11 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
         }
 
         if (itemStack.isEmpty()) {
-            if (this.hasStackEquipped(EquipmentSlot.CHEST) && this.equip(player, EquipmentSlot.CHEST, itemStack, hand)) {
+            if (!this.bodyArmor.isEmpty() && this.equip(player, EquipmentSlot.BODY, itemStack, hand)) {
                 return ActionResult.SUCCESS;
             }
-        } else if (itemStack.getItem() instanceof HorseArmorItem && !this.isSlotDisabled(EquipmentSlot.CHEST)) {
-            if (this.isSlotDisabled(EquipmentSlot.CHEST)) {
-                return ActionResult.FAIL;
-            }
-            if (this.equip(player, EquipmentSlot.CHEST, itemStack, hand)) {
+        } else if (isHorseArmor(itemStack)) {
+            if (this.equip(player, EquipmentSlot.BODY, itemStack, hand)) {
                 return ActionResult.SUCCESS;
             }
         }
@@ -328,63 +231,73 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
 
     @Override
     public boolean damage(DamageSource source, float amount) {
-        if (this.getWorld().isClient || this.isRemoved()) {
+        if (this.isRemoved()) {
             return false;
-        }
-        if (source.isIn(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
-            this.kill();
-            return false;
-        }
-        if (this.isInvulnerableTo(source) || this.invisible || this.isMarker()) {
-            return false;
-        }
-        if (source.isIn(DamageTypeTags.IS_EXPLOSION)) {
-            this.onBreak(source);
-            this.kill();
-            return false;
-        }
-        if (source.isIn(DamageTypeTags.IGNITES_ARMOR_STANDS)) {
-            if (this.isOnFire()) {
-                this.updateHealth(source, 0.15f);
+        } else {
+            World var4 = this.getWorld();
+            if (var4 instanceof ServerWorld) {
+                ServerWorld serverWorld = (ServerWorld)var4;
+                if (source.isIn(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
+                    this.kill();
+                    return false;
+                } else if (!this.isInvulnerableTo(source) && !this.invisible && !this.isMarker()) {
+                    if (source.isIn(DamageTypeTags.IS_EXPLOSION)) {
+                        this.onBreak(serverWorld, source);
+                        this.kill();
+                        return false;
+                    } else if (source.isIn(DamageTypeTags.IGNITES_ARMOR_STANDS)) {
+                        if (this.isOnFire()) {
+                            this.updateHealth(serverWorld, source, 0.15F);
+                        } else {
+                            this.setOnFireFor(5.0F);
+                        }
+
+                        return false;
+                    } else if (source.isIn(DamageTypeTags.BURNS_ARMOR_STANDS) && this.getHealth() > 0.5F) {
+                        this.updateHealth(serverWorld, source, 4.0F);
+                        return false;
+                    } else {
+                        boolean bl = source.isIn(DamageTypeTags.CAN_BREAK_ARMOR_STAND);
+                        boolean bl2 = source.isIn(DamageTypeTags.ALWAYS_KILLS_ARMOR_STANDS);
+                        if (!bl && !bl2) {
+                            return false;
+                        } else {
+                            Entity var7 = source.getAttacker();
+                            if (var7 instanceof PlayerEntity) {
+                                PlayerEntity playerEntity = (PlayerEntity)var7;
+                                if (!playerEntity.getAbilities().allowModifyWorld) {
+                                    return false;
+                                }
+                            }
+
+                            if (source.isSourceCreativePlayer()) {
+                                this.playBreakSound();
+                                this.spawnBreakParticles();
+                                this.kill();
+                                return true;
+                            } else {
+                                long l = serverWorld.getTime();
+                                if (l - this.lastHitTime > 5L && !bl2) {
+                                    serverWorld.sendEntityStatus(this, (byte)32);
+                                    this.emitGameEvent(GameEvent.ENTITY_DAMAGE, source.getAttacker());
+                                    this.lastHitTime = l;
+                                } else {
+                                    this.breakAndDropItem(serverWorld, source);
+                                    this.spawnBreakParticles();
+                                    this.kill();
+                                }
+
+                                return true;
+                            }
+                        }
+                    }
+                } else {
+                    return false;
+                }
             } else {
-                this.setOnFireFor(5);
-            }
-            return false;
-        }
-        if (source.isIn(DamageTypeTags.BURNS_ARMOR_STANDS) && this.getHealth() > 0.5f) {
-            this.updateHealth(source, 4.0f);
-            return false;
-        }
-        boolean bl = source.getSource() instanceof PersistentProjectileEntity;
-        boolean bl2 = bl && ((PersistentProjectileEntity) source.getSource()).getPierceLevel() > 0;
-        boolean bl3 = "player".equals(source.getName());
-        if (!bl3 && !bl) {
-            return false;
-        }
-        Entity entity = source.getAttacker();
-        if (entity instanceof PlayerEntity) {
-            PlayerEntity playerEntity = (PlayerEntity) entity;
-            if (!playerEntity.getAbilities().allowModifyWorld) {
                 return false;
             }
         }
-        if (source.isSourceCreativePlayer()) {
-            this.playBreakSound();
-            this.spawnBreakParticles();
-            this.kill();
-            return bl2;
-        }
-        long l = this.getWorld().getTime();
-        if (l - this.lastHitTime <= 5L || bl) {
-            this.breakAndDropItem(source);
-            this.spawnBreakParticles();
-            this.kill();
-        } else {
-            this.getWorld().sendEntityStatus(this, EntityStatuses.HIT_ARMOR_STAND);
-            this.emitGameEvent(GameEvent.ENTITY_DAMAGE, source.getAttacker());
-            this.lastHitTime = l;
-        }
-        return true;
     }
 
     @Override
@@ -397,6 +310,11 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
         } else {
             super.handleStatus(status);
         }
+    }
+
+    @Override
+    public Iterable<ItemStack> getArmorItems() {
+        return this.armorItems;
     }
 
     @Override
@@ -414,36 +332,33 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
         }
     }
 
-    private void updateHealth(DamageSource damageSource, float amount) {
+    private void updateHealth(ServerWorld world, DamageSource damageSource, float amount) {
         float f = this.getHealth();
-        if ((f -= amount) <= 0.5f) {
-            this.onBreak(damageSource);
+        f -= amount;
+        if (f <= 0.5F) {
+            this.onBreak(world, damageSource);
             this.kill();
         } else {
             this.setHealth(f);
             this.emitGameEvent(GameEvent.ENTITY_DAMAGE, damageSource.getAttacker());
         }
+
     }
 
-    private void breakAndDropItem(DamageSource damageSource) {
+    private void breakAndDropItem(ServerWorld world, DamageSource damageSource) {
         ItemStack itemStack = new ItemStack(ModItems.HORSE_ARMOR_STAND_ITEM);
-        if (this.hasCustomName()) {
-            itemStack.setCustomName(this.getCustomName());
-        }
+        itemStack.set(DataComponentTypes.CUSTOM_NAME, this.getCustomName());
         Block.dropStack(this.getWorld(), this.getBlockPos(), itemStack);
-        this.onBreak(damageSource);
+        this.onBreak(world, damageSource);
     }
 
-    private void onBreak(DamageSource damageSource) {
-        ItemStack itemStack;
-        int i;
+    private void onBreak(ServerWorld world, DamageSource damageSource) {
         this.playBreakSound();
-        this.drop(damageSource);
-        for (i = 0; i < this.armorItems.size(); ++i) {
-            itemStack = this.armorItems.get(i);
-            if (itemStack.isEmpty()) continue;
-            Block.dropStack(this.getWorld(), this.getBlockPos().up(), itemStack);
-            this.armorItems.set(i, ItemStack.EMPTY);
+        this.drop(world, damageSource);
+
+        if (!this.bodyArmor.isEmpty()) {
+            Block.dropStack(this.getWorld(), this.getBlockPos().up(), this.bodyArmor);
+            this.bodyArmor = ItemStack.EMPTY;
         }
     }
 
@@ -456,16 +371,6 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
         this.prevBodyYaw = this.prevYaw;
         this.bodyYaw = this.getYaw();
         return 0.0f;
-    }
-
-    @Override
-    protected float getActiveEyeHeight(EntityPose pose, EntityDimensions dimensions) {
-        return dimensions.height * (this.isBaby() ? 0.5f : 0.9f);
-    }
-
-    @Override
-    public double getHeightOffset() {
-        return this.isMarker() ? 0.0 : (double) 0.1f;
     }
 
     @Override
@@ -490,33 +395,7 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
 
     @Override
     public void tick() {
-        // POSES
-/*        EulerAngle eulerAngle6;
-        EulerAngle eulerAngle5;
-        EulerAngle eulerAngle4;
-        EulerAngle eulerAngle3;
-        EulerAngle eulerAngle2;*/
         super.tick();
-        // POSES
-        /*EulerAngle eulerAngle = this.dataTracker.get(TRACKER_HEAD_ROTATION);
-        if (!this.headRotation.equals(eulerAngle)) {
-            this.setHeadRotation(eulerAngle);
-        }
-        if (!this.bodyRotation.equals(eulerAngle2 = this.dataTracker.get(TRACKER_BODY_ROTATION))) {
-            this.setBodyRotation(eulerAngle2);
-        }
-        if (!this.leftArmRotation.equals(eulerAngle3 = this.dataTracker.get(TRACKER_LEFT_ARM_ROTATION))) {
-            this.setLeftArmRotation(eulerAngle3);
-        }
-        if (!this.rightArmRotation.equals(eulerAngle4 = this.dataTracker.get(TRACKER_RIGHT_ARM_ROTATION))) {
-            this.setRightArmRotation(eulerAngle4);
-        }
-        if (!this.leftLegRotation.equals(eulerAngle5 = this.dataTracker.get(TRACKER_LEFT_LEG_ROTATION))) {
-            this.setLeftLegRotation(eulerAngle5);
-        }
-        if (!this.rightLegRotation.equals(eulerAngle6 = this.dataTracker.get(TRACKER_RIGHT_LEG_ROTATION))) {
-            this.setRightLegRotation(eulerAngle6);
-        }*/
     }
 
     @Override
@@ -542,7 +421,7 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
     }
 
     @Override
-    public boolean isImmuneToExplosion() {
+    public boolean isImmuneToExplosion(Explosion explosion) {
         return this.isInvisible();
     }
 
@@ -588,61 +467,6 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
         return value;
     }
 
-    // POSES
-    /*public void setHeadRotation(EulerAngle angle) {
-        this.headRotation = angle;
-        this.dataTracker.set(TRACKER_HEAD_ROTATION, angle);
-    }
-
-    public void setBodyRotation(EulerAngle angle) {
-        this.bodyRotation = angle;
-        this.dataTracker.set(TRACKER_BODY_ROTATION, angle);
-    }
-
-    public void setLeftArmRotation(EulerAngle angle) {
-        this.leftArmRotation = angle;
-        this.dataTracker.set(TRACKER_LEFT_ARM_ROTATION, angle);
-    }
-
-    public void setRightArmRotation(EulerAngle angle) {
-        this.rightArmRotation = angle;
-        this.dataTracker.set(TRACKER_RIGHT_ARM_ROTATION, angle);
-    }
-
-    public void setLeftLegRotation(EulerAngle angle) {
-        this.leftLegRotation = angle;
-        this.dataTracker.set(TRACKER_LEFT_LEG_ROTATION, angle);
-    }
-
-    public void setRightLegRotation(EulerAngle angle) {
-        this.rightLegRotation = angle;
-        this.dataTracker.set(TRACKER_RIGHT_LEG_ROTATION, angle);
-    }
-
-    public EulerAngle getHeadRotation() {
-        return this.headRotation;
-    }
-
-    public EulerAngle getBodyRotation() {
-        return this.bodyRotation;
-    }
-
-    public EulerAngle getLeftArmRotation() {
-        return this.leftArmRotation;
-    }
-
-    public EulerAngle getRightArmRotation() {
-        return this.rightArmRotation;
-    }
-
-    public EulerAngle getLeftLegRotation() {
-        return this.leftLegRotation;
-    }
-
-    public EulerAngle getRightLegRotation() {
-        return this.rightLegRotation;
-    }
-*/
     @Override
     public boolean canHit() {
         return super.canHit() && !this.isMarker();
@@ -699,7 +523,7 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
     }
 
     @Override
-    public EntityDimensions getDimensions(EntityPose pose) {
+    public EntityDimensions getBaseDimensions(EntityPose pose) {
         return this.getDimensions(this.isMarker());
     }
 
@@ -740,6 +564,16 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
         return !this.isInvisible() && !this.isMarker();
     }
 
+    public boolean isHorseArmor(ItemStack stack) {
+        Item var3 = stack.getItem();
+        if (var3 instanceof AnimalArmorItem animalArmorItem) {
+            if (animalArmorItem.getType() == AnimalArmorItem.Type.EQUESTRIAN) {
+                return true;
+            }
+        }
+
+        return false;
+    }
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllerRegistrar) {
         controllerRegistrar.add(new AnimationController<>(this, "controller", 0, this::predicate));

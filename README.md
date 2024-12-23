@@ -19,8 +19,6 @@ Well you see it's quite simple, you need to craft it like this:
 
 Then you can use it just as a classic armor stand. How will you display your cool armors?
 
-
-
 ## Requirements
 - Geckolib
 - FabricAPI

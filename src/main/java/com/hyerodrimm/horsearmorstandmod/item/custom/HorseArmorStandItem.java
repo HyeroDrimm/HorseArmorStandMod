@@ -4,7 +4,6 @@ import com.hyerodrimm.horsearmorstandmod.entity.ModEntities;
 import com.hyerodrimm.horsearmorstandmod.entity.custom.HorseArmorStandEntity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.decoration.ArmorStandEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
@@ -20,7 +19,7 @@ import net.minecraft.world.event.GameEvent;
 import java.util.function.Consumer;
 
 public class HorseArmorStandItem extends Item {
-    public HorseArmorStandItem(Settings settings) {
+    public HorseArmorStandItem(net.minecraft.item.Item.Settings settings) {
         super(settings);
     }
 
@@ -41,8 +40,8 @@ public class HorseArmorStandItem extends Item {
         }
         if (world instanceof ServerWorld) {
             ServerWorld serverWorld = (ServerWorld)world;
-            Consumer consumer = EntityType.copier(serverWorld, itemStack, context.getPlayer());
-            HorseArmorStandEntity horseArmorStandEntity = ModEntities.HORSE_ARMOR_STAND.create(serverWorld, itemStack.getNbt(), consumer, blockPos, SpawnReason.SPAWN_EGG, true, true);
+            Consumer<HorseArmorStandEntity> consumer = EntityType.copier(serverWorld, itemStack, context.getPlayer());
+            HorseArmorStandEntity horseArmorStandEntity = ModEntities.HORSE_ARMOR_STAND.create(serverWorld, consumer, blockPos, SpawnReason.SPAWN_EGG, true, true);
             if (horseArmorStandEntity == null) {
                 return ActionResult.FAIL;
             }

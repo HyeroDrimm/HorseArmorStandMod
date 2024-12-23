@@ -21,7 +21,7 @@ public class HorseArmorStandEntityRenderer extends GeoEntityRenderer<HorseArmorS
 
     @Override
     public Identifier getTextureLocation(HorseArmorStandEntity animatable) {
-        return new Identifier(HorseArmorStandMod.MOD_ID, "textures/entity/horsearmorstandentity.png");
+        return Identifier.of(HorseArmorStandMod.MOD_ID, "textures/entity/horsearmorstandentity.png");
     }
 
     @Override

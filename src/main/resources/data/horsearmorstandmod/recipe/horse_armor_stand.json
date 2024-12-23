@@ -7,15 +7,18 @@
     },
     "_": {
       "item": "minecraft:smooth_stone_slab"
+    },
+    "#": {
+      "tag": "minecraft:planks"
     }
   },
   "pattern": [
-    "/  ",
-    "///",
+    "  /",
+    "###",
     "/_/"
   ],
   "result": {
-    "item": "horsearmorstandmod:horsearmorstanditem"
+    "id": "horsearmorstandmod:horsearmorstanditem"
   },
   "show_notification": true
 }
