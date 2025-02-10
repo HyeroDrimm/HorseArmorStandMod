@@ -41,7 +41,7 @@ public class HorseArmorStandItem extends Item {
         if (world instanceof ServerWorld) {
             ServerWorld serverWorld = (ServerWorld)world;
             Consumer<HorseArmorStandEntity> consumer = EntityType.copier(serverWorld, itemStack, context.getPlayer());
-            HorseArmorStandEntity horseArmorStandEntity = ModEntities.HORSE_ARMOR_STAND.create(serverWorld, consumer, blockPos, SpawnReason.SPAWN_EGG, true, true);
+            HorseArmorStandEntity horseArmorStandEntity = ModEntities.HORSE_ARMOR_STAND.create(serverWorld, consumer, blockPos, SpawnReason.SPAWN_ITEM_USE, true, true);
             if (horseArmorStandEntity == null) {
                 return ActionResult.FAIL;
             }
@@ -52,6 +52,6 @@ public class HorseArmorStandItem extends Item {
             horseArmorStandEntity.emitGameEvent(GameEvent.ENTITY_PLACE, context.getPlayer());
         }
         itemStack.decrement(1);
-        return ActionResult.success(world.isClient);
+        return ActionResult.SUCCESS;
     }
 }

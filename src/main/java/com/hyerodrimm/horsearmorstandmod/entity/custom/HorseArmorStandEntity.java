@@ -14,6 +14,8 @@ import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
+import net.minecraft.entity.decoration.ArmorStandEntity;
+import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.vehicle.AbstractMinecartEntity;
 import net.minecraft.item.AnimalArmorItem;
@@ -35,6 +37,7 @@ import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.GameRules;
 import net.minecraft.world.LightType;
 import net.minecraft.world.World;
 import net.minecraft.world.event.GameEvent;
@@ -46,6 +49,8 @@ import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.animatable.instance.SingletonAnimatableInstanceCache;
 import software.bernie.geckolib.animation.*;
 import software.bernie.geckolib.animation.AnimationState;
+
+import java.util.Iterator;
 import java.util.List;
 import java.util.function.Predicate;
 
@@ -55,12 +60,12 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
     private boolean playSwayAnimation = false;
     private AnimatableInstanceCache cache = new SingletonAnimatableInstanceCache(this);
     private static final EntityDimensions MARKER_DIMENSIONS = EntityDimensions.fixed(0.0F, 0.0F);
-    private static final EntityDimensions SMALL_DIMENSIONS = ModEntities.HORSE_ARMOR_STAND.getDimensions().scaled(0.5f);
+    private static final EntityDimensions SMALL_DIMENSIONS;
+    private static final Predicate<Entity> RIDEABLE_MINECART_PREDICATE;
     public static final int SMALL_FLAG = 1;
     public static final int HIDE_BASE_PLATE_FLAG = 8;
     public static final int MARKER_FLAG = 16;
     public static final TrackedData<Byte> HORSE_ARMOR_STAND_FLAGS = DataTracker.registerData(HorseArmorStandEntity.class, TrackedDataHandlerRegistry.BYTE);
-    private static final Predicate<Entity> RIDEABLE_MINECART_PREDICATE = entity -> entity instanceof AbstractMinecartEntity && ((AbstractMinecartEntity) entity).getMinecartType() == AbstractMinecartEntity.Type.RIDEABLE;
     private final DefaultedList<ItemStack> armorItems = DefaultedList.ofSize(4, ItemStack.EMPTY);;
     private ItemStack bodyArmor = ItemStack.EMPTY;
     private boolean invisible;
@@ -72,10 +77,10 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
     }
 
     public static DefaultAttributeContainer.Builder createArmorStandAttributes() {
-        return createLivingAttributes().add(EntityAttributes.GENERIC_STEP_HEIGHT, 0.0);
+        return createLivingAttributes().add(EntityAttributes.STEP_HEIGHT, 0.0);
     }
 
-    @Override
+    
     public void calculateDimensions() {
         double d = this.getX();
         double e = this.getY();
@@ -88,7 +93,7 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
         return !this.isMarker() && !this.hasNoGravity();
     }
 
-    @Override
+    
     public boolean canMoveVoluntarily() {
         return super.canMoveVoluntarily() && this.canClip();
     }
@@ -102,7 +107,7 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
         return this.bodyArmor;
     }
 
-    @Override
+    
     public ItemStack getEquippedStack(EquipmentSlot slot) {
         switch (slot.getType()) {
             case ANIMAL_ARMOR: {
@@ -112,7 +117,10 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
         return ItemStack.EMPTY;
     }
 
-    @Override
+    public boolean canUseSlot(EquipmentSlot slot) {
+        return slot != EquipmentSlot.BODY && !this.isSlotDisabled(slot);
+    }
+
     public void equipStack(EquipmentSlot slot, ItemStack stack) {
         this.processEquippedStack(stack);
         switch (slot.getType()) {
@@ -121,16 +129,10 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
             }
         }
     }
-
-    @Override
-    public boolean canEquip(ItemStack stack) {
-        return !stack.isEmpty() && stack.getItem() instanceof AnimalArmorItem && this.getArmorType().isEmpty() && !this.isSlotDisabled(EquipmentSlot.BODY);
-    }
-
-    @Override
+    
     public void writeCustomDataToNbt(NbtCompound nbt) {
         super.writeCustomDataToNbt(nbt);
-        nbt.put("BodyArmor", this.bodyArmor.encodeAllowEmpty(this.getRegistryManager()));
+        nbt.put("BodyArmor", this.bodyArmor.toNbtAllowEmpty(this.getRegistryManager()));
         nbt.putBoolean("Invisible", this.isInvisible());
         nbt.putBoolean("Small", this.isSmall());
         nbt.putInt("DisabledSlots", this.disabledSlots);
@@ -140,7 +142,7 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
         }
     }
 
-    @Override
+    
     public void readCustomDataFromNbt(NbtCompound nbt) {
         super.readCustomDataFromNbt(nbt);
         if (nbt.contains("BodyArmor", NbtElement.COMPOUND_TYPE)) {
@@ -156,64 +158,76 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
         this.noClip = !this.canClip();
     }
 
-    @Override
+    
     public boolean isPushable() {
         return false;
     }
 
-    @Override
+    
     protected void pushAway(Entity entity) {
     }
 
-    @Override
+    
     protected void tickCramming() {
         List<Entity> list = this.getWorld().getOtherEntities(this, this.getBoundingBox(), RIDEABLE_MINECART_PREDICATE);
-        for (int i = 0; i < list.size(); ++i) {
-            Entity entity = list.get(i);
-            if (!(this.squaredDistanceTo(entity) <= 0.2)) continue;
-            entity.pushAwayFrom(this);
+        Iterator var2 = list.iterator();
+
+        while(var2.hasNext()) {
+            Entity entity = (Entity)var2.next();
+            if (this.squaredDistanceTo(entity) <= 0.2) {
+                entity.pushAwayFrom(this);
+            }
         }
     }
 
-    @Override
+
     public ActionResult interactAt(PlayerEntity player, Vec3d hitPos, Hand hand) {
         ItemStack itemStack = player.getStackInHand(hand);
-        if (this.isMarker() || itemStack.isOf(Items.NAME_TAG)) {
+        if (!this.isMarker() && !itemStack.isOf(Items.NAME_TAG)) {
+            if (player.isSpectator()) {
+                return ActionResult.SUCCESS;
+            } else if (player.getWorld().isClient) {
+                return ActionResult.SUCCESS_SERVER;
+            } else {
+                EquipmentSlot equipmentSlot = this.getPreferredEquipmentSlot(itemStack);
+                if (itemStack.isEmpty()) {
+                    if (this.hasStackEquipped(equipmentSlot) && this.equip(player, equipmentSlot, itemStack, hand)) {
+                        return ActionResult.SUCCESS_SERVER;
+                    }
+                } else {
+                    if (this.isSlotDisabled(equipmentSlot)) {
+                        return ActionResult.FAIL;
+                    }
+
+//                    if (equipmentSlot.getType() != EquipmentSlot.Type.HAND && !this.shouldShowArms()) {
+//                        return ActionResult.FAIL;
+//                    }
+
+                    if (this.equip(player, equipmentSlot, itemStack, hand)) {
+                        return ActionResult.SUCCESS_SERVER;
+                    }
+                }
+
+                return ActionResult.PASS;
+            }
+        } else {
             return ActionResult.PASS;
         }
-        if (player.isSpectator()) {
-            return ActionResult.SUCCESS;
-        }
-        if (player.getWorld().isClient) {
-            return ActionResult.CONSUME;
-        }
-
-        if (itemStack.isEmpty()) {
-            if (!this.bodyArmor.isEmpty() && this.equip(player, EquipmentSlot.BODY, itemStack, hand)) {
-                return ActionResult.SUCCESS;
-            }
-        } else if (isHorseArmor(itemStack)) {
-            if (this.equip(player, EquipmentSlot.BODY, itemStack, hand)) {
-                return ActionResult.SUCCESS;
-            }
-        }
-
-        return ActionResult.PASS;
     }
 
     private boolean isSlotDisabled(EquipmentSlot slot) {
-        return (this.disabledSlots & 1 << slot.getArmorStandSlotId()) != 0;
+        return (this.disabledSlots & 1 << slot.getOffsetIndex(0)) != 0;
     }
 
     private boolean equip(PlayerEntity player, EquipmentSlot slot, ItemStack stack, Hand hand) {
         ItemStack itemStack = this.getEquippedStack(slot);
-        if (!itemStack.isEmpty() && (this.disabledSlots & 1 << slot.getArmorStandSlotId() + 8) != 0) {
+        if (!itemStack.isEmpty() && (this.disabledSlots & 1 << slot.getOffsetIndex(8)) != 0) {
             return false;
         }
-        if (itemStack.isEmpty() && (this.disabledSlots & 1 << slot.getArmorStandSlotId() + 16) != 0) {
+        if (itemStack.isEmpty() && (this.disabledSlots & 1 << slot.getOffsetIndex(16)) != 0) {
             return false;
         }
-        if (player.getAbilities().creativeMode && itemStack.isEmpty() && !stack.isEmpty()) {
+        if (player.isInCreativeMode() && itemStack.isEmpty() && !stack.isEmpty()) {
             this.equipStack(slot, stack.copyWithCount(1));
             return true;
         }
@@ -229,78 +243,72 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
         return true;
     }
 
-    @Override
-    public boolean damage(DamageSource source, float amount) {
+
+    public boolean damage(ServerWorld world, DamageSource source, float amount) {
         if (this.isRemoved()) {
             return false;
-        } else {
-            World var4 = this.getWorld();
-            if (var4 instanceof ServerWorld) {
-                ServerWorld serverWorld = (ServerWorld)var4;
-                if (source.isIn(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
-                    this.kill();
+        } else if (!world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING) && source.getAttacker() instanceof MobEntity) {
+            return false;
+        } else if (source.isIn(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
+            this.kill(world);
+            return false;
+        } else if (!this.isInvulnerableTo(world, source) && !this.invisible && !this.isMarker()) {
+            if (source.isIn(DamageTypeTags.IS_EXPLOSION)) {
+                this.onBreak(world, source);
+                this.kill(world);
+                return false;
+            } else if (source.isIn(DamageTypeTags.IGNITES_ARMOR_STANDS)) {
+                if (this.isOnFire()) {
+                    this.updateHealth(world, source, 0.15F);
+                } else {
+                    this.setOnFireFor(5.0F);
+                }
+
+                return false;
+            } else if (source.isIn(DamageTypeTags.BURNS_ARMOR_STANDS) && this.getHealth() > 0.5F) {
+                this.updateHealth(world, source, 4.0F);
+                return false;
+            } else {
+                boolean bl = source.isIn(DamageTypeTags.CAN_BREAK_ARMOR_STAND);
+                boolean bl2 = source.isIn(DamageTypeTags.ALWAYS_KILLS_ARMOR_STANDS);
+                if (!bl && !bl2) {
                     return false;
-                } else if (!this.isInvulnerableTo(source) && !this.invisible && !this.isMarker()) {
-                    if (source.isIn(DamageTypeTags.IS_EXPLOSION)) {
-                        this.onBreak(serverWorld, source);
-                        this.kill();
-                        return false;
-                    } else if (source.isIn(DamageTypeTags.IGNITES_ARMOR_STANDS)) {
-                        if (this.isOnFire()) {
-                            this.updateHealth(serverWorld, source, 0.15F);
-                        } else {
-                            this.setOnFireFor(5.0F);
-                        }
-
-                        return false;
-                    } else if (source.isIn(DamageTypeTags.BURNS_ARMOR_STANDS) && this.getHealth() > 0.5F) {
-                        this.updateHealth(serverWorld, source, 4.0F);
-                        return false;
-                    } else {
-                        boolean bl = source.isIn(DamageTypeTags.CAN_BREAK_ARMOR_STAND);
-                        boolean bl2 = source.isIn(DamageTypeTags.ALWAYS_KILLS_ARMOR_STANDS);
-                        if (!bl && !bl2) {
+                } else {
+                    Entity var7 = source.getAttacker();
+                    if (var7 instanceof PlayerEntity) {
+                        PlayerEntity playerEntity = (PlayerEntity)var7;
+                        if (!playerEntity.getAbilities().allowModifyWorld) {
                             return false;
-                        } else {
-                            Entity var7 = source.getAttacker();
-                            if (var7 instanceof PlayerEntity) {
-                                PlayerEntity playerEntity = (PlayerEntity)var7;
-                                if (!playerEntity.getAbilities().allowModifyWorld) {
-                                    return false;
-                                }
-                            }
-
-                            if (source.isSourceCreativePlayer()) {
-                                this.playBreakSound();
-                                this.spawnBreakParticles();
-                                this.kill();
-                                return true;
-                            } else {
-                                long l = serverWorld.getTime();
-                                if (l - this.lastHitTime > 5L && !bl2) {
-                                    serverWorld.sendEntityStatus(this, (byte)32);
-                                    this.emitGameEvent(GameEvent.ENTITY_DAMAGE, source.getAttacker());
-                                    this.lastHitTime = l;
-                                } else {
-                                    this.breakAndDropItem(serverWorld, source);
-                                    this.spawnBreakParticles();
-                                    this.kill();
-                                }
-
-                                return true;
-                            }
                         }
                     }
-                } else {
-                    return false;
+
+                    if (source.isSourceCreativePlayer()) {
+                        this.playBreakSound();
+                        this.spawnBreakParticles();
+                        this.kill(world);
+                        return true;
+                    } else {
+                        long l = world.getTime();
+                        if (l - this.lastHitTime > 5L && !bl2) {
+                            world.sendEntityStatus(this, (byte)32);
+                            this.emitGameEvent(GameEvent.ENTITY_DAMAGE, source.getAttacker());
+                            this.lastHitTime = l;
+                        } else {
+                            this.breakAndDropItem(world, source);
+                            this.spawnBreakParticles();
+                            this.kill(world);
+                        }
+
+                        return true;
+                    }
                 }
-            } else {
-                return false;
             }
+        } else {
+            return false;
         }
     }
 
-    @Override
+    
     public void handleStatus(byte status) {
         if (status == EntityStatuses.HIT_ARMOR_STAND) {
             if (this.getWorld().isClient) {
@@ -312,12 +320,12 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
         }
     }
 
-    @Override
+    
     public Iterable<ItemStack> getArmorItems() {
         return this.armorItems;
     }
 
-    @Override
+    
     public boolean shouldRender(double distance) {
         double d = this.getBoundingBox().getAverageSideLength() * 4.0;
         if (Double.isNaN(d) || d == 0.0) {
@@ -366,14 +374,14 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
         this.getWorld().playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_ARMOR_STAND_BREAK, this.getSoundCategory(), 1.0f, 1.0f);
     }
 
-    @Override
+    
     protected float turnHead(float bodyRotation, float headRotation) {
         this.prevBodyYaw = this.prevYaw;
         this.bodyYaw = this.getYaw();
         return 0.0f;
     }
 
-    @Override
+    
     public void travel(Vec3d movementInput) {
         if (!this.canClip()) {
             return;
@@ -381,51 +389,50 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
         super.travel(movementInput);
     }
 
-    @Override
+    
     public void setBodyYaw(float bodyYaw) {
         this.prevBodyYaw = this.prevYaw = bodyYaw;
         this.prevHeadYaw = this.headYaw = bodyYaw;
     }
 
-    @Override
+    
     public void setHeadYaw(float headYaw) {
         this.prevBodyYaw = this.prevYaw = headYaw;
         this.prevHeadYaw = this.headYaw = headYaw;
     }
 
-    @Override
+    
     public void tick() {
         super.tick();
     }
 
-    @Override
+    
     protected void updatePotionVisibility() {
         this.setInvisible(this.invisible);
     }
 
-    @Override
+    
     public void setInvisible(boolean invisible) {
         this.invisible = invisible;
         super.setInvisible(invisible);
     }
 
-    @Override
+    
     public boolean isBaby() {
         return this.isSmall();
     }
 
-    @Override
     public void kill() {
         this.remove(Entity.RemovalReason.KILLED);
         this.emitGameEvent(GameEvent.ENTITY_DIE);
     }
 
-    @Override
+    
     public boolean isImmuneToExplosion(Explosion explosion) {
         return this.isInvisible();
     }
 
-    @Override
+    
     public PistonBehavior getPistonBehavior() {
         if (this.isMarker()) {
             return PistonBehavior.IGNORE;
@@ -433,7 +440,7 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
         return super.getPistonBehavior();
     }
 
-    @Override
+    
     public boolean canAvoidTraps() {
         return this.isMarker();
     }
@@ -467,48 +474,48 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
         return value;
     }
 
-    @Override
+    
     public boolean canHit() {
         return super.canHit() && !this.isMarker();
     }
 
-    @Override
+    
     public boolean handleAttack(Entity attacker) {
         return attacker instanceof PlayerEntity && !this.getWorld().canPlayerModifyAt((PlayerEntity) attacker, this.getBlockPos());
     }
 
-    @Override
+    
     public Arm getMainArm() {
         return Arm.RIGHT;
     }
 
-    @Override
+    
     public LivingEntity.FallSounds getFallSounds() {
         return new LivingEntity.FallSounds(SoundEvents.ENTITY_ARMOR_STAND_FALL, SoundEvents.ENTITY_ARMOR_STAND_FALL);
     }
 
-    @Override
+    
     @Nullable
     protected SoundEvent getHurtSound(DamageSource source) {
         return SoundEvents.ENTITY_ARMOR_STAND_HIT;
     }
 
-    @Override
+    
     @Nullable
     protected SoundEvent getDeathSound() {
         return SoundEvents.ENTITY_ARMOR_STAND_BREAK;
     }
 
-    @Override
+    
     public void onStruckByLightning(ServerWorld world, LightningEntity lightning) {
     }
 
-    @Override
+    
     public boolean isAffectedBySplashPotions() {
         return false;
     }
 
-    @Override
+    
     public void onTrackedDataSet(TrackedData<?> data) {
         if (HORSE_ARMOR_STAND_FLAGS.equals(data)) {
             this.calculateDimensions();
@@ -517,12 +524,12 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
         super.onTrackedDataSet(data);
     }
 
-    @Override
+    
     public boolean isMobOrPlayer() {
         return false;
     }
 
-    @Override
+    
     public EntityDimensions getBaseDimensions(EntityPose pose) {
         return this.getDimensions(this.isMarker());
     }
@@ -534,7 +541,7 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
         return this.isBaby() ? SMALL_DIMENSIONS : this.getType().getDimensions();
     }
 
-    @Override
+    
     public Vec3d getClientCameraPosVec(float tickDelta) {
         if (this.isMarker()) {
             Box box = this.getDimensions(false).getBoxAt(this.getPos());
@@ -554,27 +561,16 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
         return super.getClientCameraPosVec(tickDelta);
     }
 
-    @Override
+    
     public ItemStack getPickBlockStack() {
         return new ItemStack(ModItems.HORSE_ARMOR_STAND_ITEM);
     }
 
-    @Override
+    
     public boolean isPartOfGame() {
         return !this.isInvisible() && !this.isMarker();
     }
-
-    public boolean isHorseArmor(ItemStack stack) {
-        Item var3 = stack.getItem();
-        if (var3 instanceof AnimalArmorItem animalArmorItem) {
-            if (animalArmorItem.getType() == AnimalArmorItem.Type.EQUESTRIAN) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-    @Override
+    
     public void registerControllers(AnimatableManager.ControllerRegistrar controllerRegistrar) {
         controllerRegistrar.add(new AnimationController<>(this, "controller", 0, this::predicate));
     }
@@ -589,12 +585,28 @@ public class HorseArmorStandEntity extends LivingEntity implements GeoEntity {
         return PlayState.CONTINUE;
     }
 
-    @Override
+    
     public AnimatableInstanceCache getAnimatableInstanceCache() {
         return cache;
     }
 
     public void SetPlaySwayAnimation(boolean b) {
         playSwayAnimation = b;
+    }
+
+    static {
+        SMALL_DIMENSIONS = EntityType.ARMOR_STAND.getDimensions().scaled(0.5F).withEyeHeight(0.9875F);
+        RIDEABLE_MINECART_PREDICATE = (entity) -> {
+            boolean var10000;
+            if (entity instanceof AbstractMinecartEntity abstractMinecartEntity) {
+                if (abstractMinecartEntity.isRideable()) {
+                    var10000 = true;
+                    return var10000;
+                }
+            }
+
+            var10000 = false;
+            return var10000;
+        };
     }
 }
